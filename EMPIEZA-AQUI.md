@@ -13,9 +13,18 @@ Pasos 1 a 4 ya hechos ✅ (herramientas, Spec Kit, ECC y constitución 1.0.0).
 
 ---
 
-## Paso 5 · Iniciar git en los tres repos (~2 min)
+## Paso 5 · Iniciar git en los tres repos (~5 min)
 
-En la terminal:
+Instala el cliente de GitHub (para crear PRs desde la terminal) e inicia sesión:
+```bash
+brew install gh && gh auth login
+```
+Da permiso de ejecución a los scripts y copia la plantilla de PR a los tres repos:
+```bash
+chmod +x ~/workspace/kubbo-specs/scripts/*.sh
+for r in kubbo-specs kubbo-api kubbo-web; do mkdir -p ~/workspace/$r/.github && cp ~/workspace/kubbo-specs/docs/templates/pull_request_template.md ~/workspace/$r/.github/; done
+```
+Haz el primer commit de cada repo:
 ```bash
 cd ~/workspace/kubbo-specs && git add . && git commit -m "chore: init spec kit, ecc and constitution"
 cd ~/workspace/kubbo-api   && git init && git add . && git commit -m "chore: init repo"
@@ -64,6 +73,15 @@ git add . && git commit -m "docs: constitution 1.1.0 (three repositories)"
 
 ## Paso 8 · Primera spec: los cimientos y la base de datos
 
+### 8.1 Crear el worktree de la feature
+Cada feature se trabaja en su propio worktree, nunca en `main`. La `000` toca `kubbo-specs` y `kubbo-api`:
+```bash
+cd ~/workspace/kubbo-specs
+./scripts/new-feature.sh 000-platform-foundation api
+```
+El script te imprime el comando exacto para abrir Claude Code dentro del worktree. Úsalo (sal primero de cualquier sesión de `claude` abierta).
+
+### 8.2 Escribir la spec
 Abre `docs/kickoff/specs-input/000-platform-foundation.md` y sigue sus bloques uno por uno dentro de Claude Code:
 
 1. Pega el bloque de **Paso 1** (`/speckit-specify ...`) → crea `specs/000-.../spec.md`. **Léelo.**
@@ -72,13 +90,24 @@ Abre `docs/kickoff/specs-input/000-platform-foundation.md` y sigue sus bloques u
 4. Escribe `/speckit-tasks` → revisa que cada tarea diga su repo: `[specs]`, `[api]` o `[web]`.
 5. Escribe `/speckit-analyze` → debe salir sin problemas críticos.
 
-Commit en `kubbo-specs`: `git add . && git commit -m "docs(spec-000): spec, plan and tasks"`
+Commit en el worktree de `kubbo-specs`: `git add . && git commit -m "docs(spec-000): spec, plan and tasks"`
 
-Luego crea la rama `000-platform-foundation` en `kubbo-api` y empieza a implementar con:
+### 8.3 Implementar
+Dentro de Claude Code:
 ```
 /speckit-implement
 ```
 Pide a Claude que use la skill `tdd-workflow` de ECC en cada tarea (primero el test, luego el código).
+
+### 8.4 Abrir los PRs
+Cuando todo esté en verde, pídele a Claude:
+```
+Sube la rama y abre un PR en cada repo que tocó esta feature usando .github/pull_request_template.md, con la descripción completa y enlazando los PRs entre sí.
+```
+Revisa los PRs en GitHub, mergea en orden (specs → api) y cierra la feature:
+```bash
+cd ~/workspace/kubbo-specs && git pull && ./scripts/finish-feature.sh 000-platform-foundation
+```
 
 ---
 

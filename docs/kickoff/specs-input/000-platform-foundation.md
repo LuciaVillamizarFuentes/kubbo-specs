@@ -44,7 +44,7 @@ Si te pregunta, estas son las respuestas recomendadas:
 Pega esto:
 
 ```
-/speckit-plan Usa el stack de la constitución y los CLAUDE.md de kubbo-specs y kubbo-api. Marca cada tarea con su repo destino ([specs], [api] o [web]). Decisiones técnicas para esta spec:
+/speckit-plan Usa el stack de la constitución y los CLAUDE.md de kubbo-specs y kubbo-api. El contrato debe pasar Spectral (.spectral.yaml) y kubbo-api debe servir /docs con Scalar desde el contrato embebido, más un test que compare las rutas de chi con el contrato. Marca cada tarea con su repo destino ([specs], [api] o [web]). Decisiones técnicas para esta spec:
 
 Repositorios:
 - kubbo-specs: crear el esqueleto de api/openapi.yaml (OpenAPI 3.1 con /healthz y /readyz, esquema Problem Details RFC 9457 y la extensión x-permission documentada) y etiquetarlo contract-v0.1.0.

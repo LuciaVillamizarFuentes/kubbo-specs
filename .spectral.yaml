@@ -1,0 +1,103 @@
+# Reglas de documentación del contrato de Kubbo (constitución: "API documentada de forma exhaustiva").
+# Ejecutar: npx @stoplight/spectral-cli lint api/openapi.yaml --fail-severity=warn
+extends:
+  - spectral:oas
+rules:
+  # Reglas base de Spectral que pasan a ser obligatorias
+  operation-operationId: error
+  operation-operationId-unique: error
+  operation-description: error
+  operation-tags: error
+  operation-success-response: error
+  info-description: error
+  oas3-api-servers: error
+  oas3-unused-component: warn
+
+  kubbo-operation-summary:
+    description: Cada operación necesita un summary de máximo 80 caracteres.
+    severity: error
+    given: "$.paths[*][get,post,put,patch,delete]"
+    then:
+      - field: summary
+        function: truthy
+      - field: summary
+        function: length
+        functionOptions: { max: 80 }
+
+  kubbo-operation-id-camel-case:
+    description: operationId en camelCase (verbo + recurso), ej. listRoles.
+    severity: error
+    given: "$.paths[*][get,post,put,patch,delete].operationId"
+    then:
+      function: casing
+      functionOptions: { type: camel }
+
+  kubbo-operation-permission:
+    description: Toda operación privada declara x-permission (resource.action) o x-public true.
+    severity: error
+    given: "$.paths[*][get,post,put,patch,delete]"
+    then:
+      function: schema
+      functionOptions:
+        schema:
+          anyOf:
+            - required: [x-permission]
+              properties:
+                x-permission: { type: string, pattern: "^[a-z_]+\\.[a-z_]+$" }
+            - required: [x-public]
+              properties:
+                x-public: { const: true }
+
+  kubbo-error-responses:
+    description: Toda operación privada documenta 500 y al menos un error 4xx (400, 401, 403, 404, 409, 422 o 429).
+    severity: error
+    given: "$.paths[*][?(@.operationId && @['x-public'] != true)].responses"
+    then:
+      function: schema
+      functionOptions:
+        schema:
+          required: ["500"]
+          anyOf:
+            - required: ["400"]
+            - required: ["401"]
+            - required: ["403"]
+            - required: ["404"]
+            - required: ["409"]
+            - required: ["422"]
+            - required: ["429"]
+
+  kubbo-parameter-description:
+    description: Todo parámetro tiene description y example.
+    severity: error
+    given: "$..parameters[*]"
+    then:
+      - field: description
+        function: truthy
+      - field: example
+        function: truthy
+
+  kubbo-property-description:
+    description: Toda propiedad de esquema tiene description.
+    severity: error
+    given: "$.components.schemas[*].properties[*]"
+    then:
+      field: description
+      function: truthy
+
+  kubbo-property-example:
+    description: Toda propiedad de esquema tiene example.
+    severity: warn
+    given: "$.components.schemas[*].properties[*]"
+    then:
+      field: example
+      function: defined
+
+  kubbo-deprecated-has-replacement:
+    description: Un endpoint obsoleto indica fecha de retiro y reemplazo (x-sunset y x-replaced-by).
+    severity: error
+    given: "$.paths[*][?(@.deprecated == true)]"
+    then:
+      - field: x-sunset
+        function: truthy
+      - field: x-replaced-by
+        function: truthy

@@ -42,11 +42,58 @@ comandos para confirmar alineación con esta versión:
     tests van incluidas por defecto).
   - README/CLAUDE.md del repo ya reflejan buena parte de estas reglas; no se tocan aquí.
 
-TODOs / campos diferidos:
-  - RATIFICATION_DATE: no existía una fecha de adopción previa documentada (el archivo
-    anterior era la plantilla sin rellenar). Se usa la fecha de esta sesión (2026-10-13)
-    como fecha de ratificación. Si existe una fecha real anterior de adopción del proyecto,
-    actualizarla manualmente.
+TODOs / campos diferidos: ninguno nuevo. El TODO de RATIFICATION_DATE de la versión 1.0.0 ya
+  quedó resuelto (se usó la fecha de esa sesión, 2026-10-13, como fecha de ratificación).
+-->
+
+<!--
+Sync Impact Report (enmienda 1.1.0)
+====================================
+Versión: 1.0.0 → 1.1.0
+Tipo de cambio: MINOR (nuevos principios y sección de gobernanza; ningún principio existente
+  se elimina ni se redefine de forma incompatible — la ampliación de "Contrato primero" es
+  una expansión material, no una ruptura).
+
+Principios modificados:
+  XIV. Contrato primero — ampliado: `kubbo-specs/api/openapi.yaml` es el único contrato;
+    `kubbo-api`/`kubbo-web` generan en local desde el repo y en CI desde la versión fijada
+    en su `.contract-version`; un cambio incompatible exige versión MAJOR del contrato.
+
+Principios renumerados (sin cambio de contenido, por la inserción del nuevo principio XV):
+  Test-first:              XV   → XVI
+  Eventos confiables:      XVI  → XVII
+  Simplicidad:             XVII → XVIII
+  No dar nada por sentado: XVIII → XIX
+
+Principios añadidos:
+  XV.  API documentada de forma exhaustiva (Arquitectura y Código) — el contrato OpenAPI es
+       la única documentación; exige operationId/summary/description/tags/x-permission,
+       ejemplos y restricciones en cada propiedad, todas las respuestas de error en Problem
+       Details, estándar de paginación, `deprecated` con reemplazo, y `/docs` servido desde
+       el contrato. Verificado por Spectral (`.spectral.yaml`) en CI.
+  XX.  Una feature, un worktree, un PR (Proceso) — un git worktree por repo y por feature,
+       nunca se trabaja sobre `main`, un PR por repo con la plantilla completa, orden de
+       merge specs → api → web, Conventional Commits en inglés.
+
+Secciones añadidas:
+  Gobernanza → "Repositorios": describe los tres repos (`kubbo-specs`, `kubbo-api`,
+    `kubbo-web`), su responsabilidad y que cada tarea de `tasks.md` declara su repo destino.
+  Gobernanza → Definición de terminado: se agregan 4 puntos (contrato documentado y
+    Spectral en verde, `/docs` actualizado, worktree y PR por repo con plantilla completa,
+    PRs enlazados entre repos).
+Secciones eliminadas: ninguna.
+
+Plantillas dependientes: no se modifican en este comando (alcance de /speckit-constitution
+limitado a este archivo). Pendiente de revisión manual en una futura ejecución de esos
+comandos para confirmar alineación con esta versión:
+  - .specify/templates/plan-template.md (agregar verificación del contrato documentado con
+    Spectral y de la convención de worktree/PR por repo).
+  - .specify/templates/tasks-template.md (confirmar que cada tarea generada incluye su
+    etiqueta de repo destino `[specs]`/`[api]`/`[web]`).
+  - README/CLAUDE.md del repo ya reflejan estas reglas (worktrees, PRs, Spectral); no se
+    tocan aquí.
+
+TODOs / campos diferidos: ninguno nuevo.
 -->
 
 # Constitución de Kubbo
@@ -235,14 +282,46 @@ casing de su lenguaje.
 
 ### XIV. Contrato primero
 
-Todo endpoint existe primero en `api/openapi.yaml`. El backend genera código con
-oapi-codegen y el frontend con openapi-typescript. Nunca se escriben tipos de API a mano.
+Todo endpoint existe primero en `kubbo-specs/api/openapi.yaml`: es el único contrato de la
+plataforma. `kubbo-api` genera su código con oapi-codegen y `kubbo-web` con
+openapi-typescript; ninguno de los dos escribe tipos de API a mano. En local, ambos generan
+desde `../kubbo-specs/api/openapi.yaml`; en CI, desde la versión fijada en su propio
+`.contract-version` (un tag `contract-vX.Y.Z` de `kubbo-specs`). Un cambio incompatible del
+contrato exige una versión MAJOR del contrato y actualizar `.contract-version` en ambos
+repos antes de desplegar.
 
-**Cómo se verifica:** CI falla si existe un handler o un tipo de API en frontend que no
-provenga del código generado a partir de `api/openapi.yaml`, y si el contrato no valida
-contra OpenAPI 3.x.
+**Cómo se verifica:** el CI de `kubbo-api` y `kubbo-web` falla si el código generado no
+coincide con la versión del contrato fijada en `.contract-version`, o si el contrato no
+valida contra OpenAPI 3.x.
 
-### XV. Test-first
+### XV. API documentada de forma exhaustiva
+
+La documentación de la API es el propio contrato OpenAPI; no existe documentación aparte
+que pueda quedar desactualizada.
+
+- Cada operación declara `operationId` (camelCase, verbo + recurso), `summary` (máximo 80
+  caracteres), `description` (qué hace, reglas de negocio, efectos secundarios y eventos
+  que emite), `tags` por módulo, `security` y `x-permission` con el permiso exigido (o
+  `x-public: true` si no requiere permiso).
+- Cada parámetro, header, cuerpo y propiedad de esquema tiene `description`, `example` y
+  sus restricciones (`format`, `minLength`, `maximum`, `enum`, `pattern`, etc.).
+- Cada operación documenta **todas** sus respuestas posibles: éxito y errores (400, 401,
+  403, 404, 409, 422, 429, 500 según aplique) con el esquema Problem Details (RFC 9457),
+  con ejemplos y la lista de códigos de error (p. ej. `payment_plan.installment_overdue`)
+  que puede devolver.
+- Paginación, filtros y ordenamiento siguen un estándar único documentado en el contrato.
+- Los endpoints obsoletos se marcan `deprecated: true` con la fecha de retiro y su
+  reemplazo.
+- El texto de la documentación del contrato se escribe en inglés, igual que el código.
+- La API sirve documentación interactiva en `/docs` (Scalar o Swagger UI) generada del
+  contrato: abierta en desarrollo y staging, protegida con autenticación en producción.
+
+**Cómo se verifica:** un ruleset de Spectral en el CI de `kubbo-specs`
+(`npx @stoplight/spectral-cli lint api/openapi.yaml`, reglas en `.spectral.yaml`) falla si
+falta cualquiera de estos elementos; un test de `kubbo-api` falla si existe una ruta HTTP
+que no está en el contrato, o viceversa.
+
+### XVI. Test-first
 
 TDD obligatorio (RED → GREEN → REFACTOR). Cobertura mínima del 80% en `domain` y
 `application`. Los repositorios, las políticas RLS y los permisos se prueban contra
@@ -252,7 +331,7 @@ PostgreSQL real con testcontainers.
 por debajo del 80%; los tests de repositorios, RLS y permisos deben ejecutarse contra una
 instancia real de PostgreSQL (testcontainers), no contra un mock.
 
-### XVI. Eventos confiables
+### XVII. Eventos confiables
 
 La comunicación asíncrona entre módulos usa el patrón outbox (el evento se guarda en la
 misma transacción que el cambio de negocio) y consumidores idempotentes
@@ -262,7 +341,7 @@ misma transacción que el cambio de negocio) y consumidores idempotentes
 su transacción de origen se confirmó, y que reprocesar el mismo evento no duplica efectos
 (chequeo contra `processed_events`).
 
-### XVII. Simplicidad
+### XVIII. Simplicidad
 
 No se crean tablas, módulos ni dependencias que ninguna spec aprobada necesite. Toda
 dependencia nueva se justifica en `plan.md`.
@@ -272,7 +351,7 @@ cualquier tabla, módulo o dependencia sin una spec aprobada que la respalde.
 
 ## Proceso
 
-### XVIII. No dar nada por sentado
+### XIX. No dar nada por sentado
 
 Ni las personas ni los agentes inventan información.
 
@@ -292,7 +371,37 @@ Ni las personas ni los agentes inventan información.
 sin resolver, y la revisión de `plan.md`/`research.md` rechaza una decisión importante que
 no esté registrada con su motivo y alternativas descartadas.
 
+### XX. Una feature, un worktree, un PR
+
+- Cada feature se desarrolla en un **git worktree** propio por repo que toca, con el mismo
+  nombre de rama que la carpeta de la spec (`NNN-feature-name`), creado con
+  `scripts/new-feature.sh`. Nunca se trabaja directamente sobre `main`.
+- `main` está protegida: todo entra por Pull Request con los checks de CI en verde.
+- Cada repo que toca la feature abre **su propio PR**, con la plantilla
+  `.github/pull_request_template.md` completa: spec relacionada, qué se hizo y por qué,
+  cambios por capa, matriz de permisos, i18n, seguridad, migraciones, versión del contrato,
+  cómo probarlo, evidencias y los PRs relacionados en los otros repos.
+- Orden de merge: `kubbo-specs` → `kubbo-api` → `kubbo-web`.
+- Commits con Conventional Commits en inglés (`feat(identity): ...`, `fix(finance): ...`).
+- Al terminar, los worktrees se eliminan con `scripts/finish-feature.sh`.
+
+**Cómo se verifica:** la protección de rama en GitHub y la plantilla de PR; un PR sin
+descripción completa no se aprueba.
+
 ## Gobernanza
+
+### Repositorios
+
+Kubbo se compone de tres repositorios:
+
+- `kubbo-specs`: la constitución, las specs de Spec Kit y el contrato `api/openapi.yaml`.
+  Es el punto de entrada de todo trabajo.
+- `kubbo-api`: el backend Go, sus migraciones y el entorno local.
+- `kubbo-web`: el frontend Next.js.
+
+Cada tarea de `tasks.md` declara su repositorio destino (`[specs]`, `[api]` o `[web]`).
+
+### Enmiendas y versionado
 
 La constitución prevalece sobre cualquier spec o plan. Cambiarla requiere una nota de
 motivo y una versión nueva, siguiendo versionado semántico:
@@ -310,5 +419,9 @@ principios. La definición de terminado ("Definition of Done") de toda feature i
 - Revisión de seguridad completada cuando la feature toca autenticación, permisos, pagos o
   datos personales.
 - Ningún `[NEEDS CLARIFICATION]` abierto.
+- Contrato documentado y Spectral en verde.
+- `/docs` actualizado.
+- Worktree y PR por repo con la plantilla completa.
+- PRs enlazados entre repos.
 
-**Version**: 1.0.0 | **Ratified**: 2026-10-13 | **Last Amended**: 2026-10-13
+**Version**: 1.1.0 | **Ratified**: 2026-10-13 | **Last Amended**: 2026-10-13

@@ -14,7 +14,10 @@ SaaS multi-vertical para administrar inmuebles de uso compartido (propiedad hori
   (la variable hace que también se lean los `CLAUDE.md` de los otros dos repos).
 - Las specs y planes se escriben aquí; el código va en `../kubbo-api` o `../kubbo-web` según la tarea. Cada tarea de `tasks.md` indica en qué repo va (`[api]`, `[web]` o `[specs]`).
 - **Contrato:** `api/openapi.yaml` de este repo es la única fuente de verdad. `kubbo-api` y `kubbo-web` generan su código desde `../kubbo-specs/api/openapi.yaml` en local, y en CI desde la versión fijada en su archivo `.contract-version`.
-- **Ramas:** una feature usa la misma rama en los tres repos (ej. `002-dynamic-roles-permissions`). Orden de merge: specs → api → web. Cada PR enlaza a los otros.
+- **Una feature = un worktree por repo + un PR por repo.** Se crean con `./scripts/new-feature.sh NNN-feature-name [api] [web]`, que deja todo en `~/workspace/features/NNN-feature-name/` con la misma rama en cada repo. Nunca se trabaja sobre `main`.
+- **PRs:** uno por repo, con la plantilla `.github/pull_request_template.md` completa (créalos con `gh pr create`). Orden de merge: specs → api → web. Cada PR enlaza a los otros. Commits con Conventional Commits en inglés.
+- **Al terminar:** `./scripts/finish-feature.sh NNN-feature-name` elimina los worktrees.
+- **Documentación de la API:** el contrato es la documentación. Cada operación lleva `operationId`, `summary`, `description`, `tags`, `x-permission` (o `x-public: true`), parámetros y propiedades con `description` y `example`, y todas sus respuestas de error con Problem Details. Antes de cerrar una tarea de contrato corre `npx @stoplight/spectral-cli lint api/openapi.yaml` (reglas en `.spectral.yaml`).
 
 ## Reglas de comportamiento (obligatorias)
 1. **No des nada por sentado.** Si no conoces un dato (una regla de negocio, una ley, un valor, una preferencia), no lo inventes: pregunta. Si es una spec, márcalo como `[NEEDS CLARIFICATION: ...]`.
@@ -25,7 +28,7 @@ SaaS multi-vertical para administrar inmuebles de uso compartido (propiedad hori
 6. **Nada de textos quemados.** Todo texto visible sale de i18n (`es`, `en`); el backend devuelve códigos de error.
 7. **Respeta los límites de complejidad** de la constitución (principio 12); si se pasan, refactoriza antes de cerrar la tarea.
 8. **SOLID y hexagonal** en todo el código.
-9. **No mezcles repos en un commit:** cada repo tiene sus propios commits y PR.
+9. **No mezcles repos en un commit:** cada repo tiene sus propios commits y PR. Antes de escribir código, confirma que estás en el worktree de la feature y no en `main`.
 10. **Si algo no funciona después de dos intentos, para** y explica qué probaste.
 
 ## Cómo trabajamos
