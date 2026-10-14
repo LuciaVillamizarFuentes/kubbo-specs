@@ -38,13 +38,21 @@ for repo in "${REPOS[@]}"; do
     echo "• $repo: el worktree ya existe en $dest"
     continue
   fi
-  if ! git -C "$src" rev-parse --verify main >/dev/null 2>&1; then
-    echo "Error: $repo no tiene la rama main con al menos un commit." >&2
+  default_branch=""
+  for candidate in main master; do
+    if git -C "$src" rev-parse --verify --quiet "$candidate" >/dev/null; then
+      default_branch="$candidate"; break
+    fi
+  done
+  if [ -z "$default_branch" ]; then
+    echo "Error: $repo no tiene una rama main o master con al menos un commit." >&2
     exit 1
   fi
-  base="main"
+  base="$default_branch"
   if git -C "$src" remote get-url origin >/dev/null 2>&1; then
-    git -C "$src" fetch --quiet origin main && base="origin/main"
+    if git -C "$src" fetch --quiet origin "$default_branch"; then
+      base="origin/$default_branch"
+    fi
   fi
   if git -C "$src" rev-parse --verify "$FEATURE" >/dev/null 2>&1; then
     git -C "$src" worktree add "$dest" "$FEATURE"

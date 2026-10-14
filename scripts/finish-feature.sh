@@ -16,11 +16,13 @@ for repo in kubbo-specs kubbo-api kubbo-web; do
     exit 1
   fi
   git -C "$WORKSPACE/$repo" worktree remove "$dest"
-  if git -C "$WORKSPACE/$repo" branch --merged main | grep -qx "  $FEATURE"; then
+  default_branch="main"
+  git -C "$WORKSPACE/$repo" rev-parse --verify --quiet main >/dev/null || default_branch="master"
+  if git -C "$WORKSPACE/$repo" branch --merged "$default_branch" | grep -qx "  $FEATURE"; then
     git -C "$WORKSPACE/$repo" branch -d "$FEATURE"
     echo "✓ $repo: worktree y rama eliminados"
   else
-    echo "• $repo: worktree eliminado; la rama $FEATURE se conserva porque aún no está mergeada en main local (haz git pull en main)"
+    echo "• $repo: worktree eliminado; la rama $FEATURE se conserva porque aún no está mergeada en $default_branch local (haz git pull)"
   fi
 done
 
